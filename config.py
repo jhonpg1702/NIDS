@@ -9,4 +9,3 @@ class Config(object):
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     REDIS_URL = "redis://localhost"
-    

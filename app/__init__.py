@@ -1,6 +1,5 @@
 from flask import Flask
 
-
 from config import Config
 
 from flask_sse import sse

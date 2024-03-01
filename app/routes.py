@@ -29,7 +29,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 def index():
        interface = netifaces.interfaces()
        form = If_form();
-       print(request.url)
+       print("request.url",request.url)
        interface.insert(0,"-- Please Select Interface --")
        form.interface.choices = interface
        form.interface.default = interface[0]
@@ -41,13 +41,15 @@ def index():
 
 def cicflowmeter(start,interface):
     global pid
-    if start:     
+    if start: 
         p = subprocess.Popen(["cicflowmeter","-i",
                             interface,"-c",
                             os.path.join(basedir, 'static/flows.csv') ,
                             "-u",
                             request.url_root+"predict/"]) # Call subprocess
         pid = p.pid
+        print(pid,start,p)    
+
     elif not start:        
         os.kill(pid, signal.SIGSTOP)
         
@@ -58,6 +60,7 @@ def cicflowmeter(start,interface):
 def start():
         form = If_form();      
         cicflowmeter(True,form.interface.data)
+        print(form.interface.data)
         session['interface'] = form.interface.data
         return redirect(url_for('home'))
 
@@ -69,6 +72,7 @@ def ip():
     ip = request.args.get('ip')
     if request.method == 'GET':
         whois = subprocess.check_output([f'whois {ip}'],shell=True)
+        print("whois",whois)
         # traceroute = subprocess.check_output([f'traceroute  {ip}'],shell=True)        
         message = {'whois': whois.decode("utf-8")}
         return jsonify(message)  # serialize and use JSON headers
@@ -101,8 +105,8 @@ def testing():
     sqlInjection = 0
     xss = 0
     total = 0
-    df = pd.read_csv(os.path.join(basedir, 'smt_X_Test.csv'));
-    y_test = pd.read_csv(os.path.join(basedir, 'smt_y_Test.csv'));
+    df = pd.read_csv(os.path.join(basedir, 'smt_X_Test.csv'))
+    y_test = pd.read_csv(os.path.join(basedir, 'smt_y_Test.csv'))
     df.drop('Unnamed: 0',
     axis='columns', inplace=True)
     pred = model.predict(df)    
@@ -148,10 +152,18 @@ def testing():
 
     return render_template('testing.html', result = result)
 
-
+class PandasEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (pd.DataFrame, pd.Series)):
+            return obj.to_dict()
+        elif isinstance(obj, pd.Index):
+            return obj.tolist()
+        return super().default(obj)
+    
 @app.route('/predict/', methods=['POST'])
 def predict():
     req = request.get_json()
+    print("req",req)
     df1 = pd.DataFrame(data=req["data"], columns=req["columns"] )
     df2 = df1.copy()
     cols = [' Bwd Packet Length Std', ' min_seg_size_forward', ' PSH Flag Count',
@@ -188,7 +200,9 @@ def predict():
     df1.rename(columns = {" Destination Port": "dst_port"}, 
         inplace = True)
 
-    result = df1.to_json(orient="records")    
+    # result = df1.to_json(orient="records")    
+    result= json.dumps(df1, cls=PandasEncoder)
+    print("result",result)
     sse.publish(result, type='greeting')
     resp = {"label" :  df1['label'].values[0]}
     print(resp)
