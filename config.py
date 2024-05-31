@@ -9,3 +9,5 @@ class Config(object):
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     REDIS_URL = "redis://localhost"
+    WHATSAPP_TOKEN = os.environ['WHATSAPP_TOKEN']
+    WEBHOOK_TOKEN = os.environ['WEBHOOK_TOKEN']
